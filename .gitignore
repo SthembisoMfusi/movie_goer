@@ -26,7 +26,8 @@ out-tsc/
 # IDEs and editors' directories
 .vscode/
 .idea/
-
+data/
+.csv
 # Build artifacts (from production)
 build/
 artifacts/
