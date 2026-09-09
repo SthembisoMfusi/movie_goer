@@ -1,0 +1,39 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependency directories (from node_modules)
+node_modules/
+jspm_packages/
+
+# Optional: cache directory used by tools like Webpack and Babel
+.cache/
+.babel-cache/
+.eslintcache/
+.pnp/
+
+# Runtime temp files and artifacts
+tmp/
+dist/
+coverage/
+output/
+out-tsc/
+*.tsbuildinfo
+
+# IDEs and editors' directories
+.vscode/
+.idea/
+
+# Build artifacts (from production)
+build/
+artifacts/
+
+# Other common build artifacts
+*.tgz
+*.zip
+*.rar
+
+.env
