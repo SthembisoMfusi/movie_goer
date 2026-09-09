@@ -8,3 +8,4 @@ export default async function authRoutes(fastify: FastifyInstance) {
     fastify.delete('/me',deleteUser );
 
 };
+
