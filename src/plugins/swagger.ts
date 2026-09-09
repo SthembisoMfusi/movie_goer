@@ -67,6 +67,26 @@ const openApiDocument = {
           '200': { description: 'A list of matching movies' }
         }
       }
+    },
+    '/titles/{id}': {
+      get: {
+        tags: ['Titles'],
+        summary: 'Get a movie by ID',
+        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
+        responses: {
+          '200': { description: 'The requested movie' },
+          '404': { description: 'Movie not found' }
+        }
+      }
+    },
+    '/titles/top-rated': {
+      get: {
+        tags: ['Titles'],
+        summary: 'Get the top-rated movies',
+        responses: {
+          '200': { description: 'A list of top-rated movies' }
+        }
+      }
     }
   },
   components: {
@@ -93,11 +113,11 @@ async function swaggerConfig(fastify: FastifyInstance) {
   await fastify.register(fastifySwagger, {
     mode: 'static',
     specification: {
-      document: openApiDocument as any 
+      document: openApiDocument as any
     }
   });
 
-  
+
   await fastify.register(fastifySwaggerUi, {
     routePrefix: '/docs',
     uiConfig: {

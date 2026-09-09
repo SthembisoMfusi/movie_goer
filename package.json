@@ -2,7 +2,7 @@
   "name": "movie_goer",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "app.ts",
   "scripts": {
     "test": "vitest",
     "start": "tsx src/app.ts",

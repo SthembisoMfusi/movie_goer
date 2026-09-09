@@ -25,3 +25,45 @@ export const searchTitles = async (request: FastifyRequest, reply: FastifyReply)
     }
 };
 
+
+export const getTitleById = async (request: FastifyRequest, reply: FastifyReply) => {
+    const id = (request.params as any).id;
+    if (!id){
+        return reply.status(400).send({ error: 'Please provide a title ID'});
+    }
+
+    try {
+        const title = await request.server.db.Title.findByPk(id, {
+            include: [{ model: request.server.db.Rating, required: false}]
+        });
+        if (!title) {
+            return reply.status(404).send({ error: 'Title not found'});
+        }
+        return reply.send({ success: true, title });
+    } catch (error){
+        request.server.log.error(error)
+        return reply.status(500).send({ error: 'Database query failed'});
+    }
+}
+
+export const getTopRatedTitles = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+        const topRatedTitles = await request.server.db.Title.findAll({
+            include: [{
+                model: request.server.db.Rating,
+                required: true,
+                where: {
+                    averageRating: {
+                        [Op.gte]: 8.0
+                    }
+                }
+            }]  ,
+            order: [[request.server.db.Rating, 'averageRating', 'DESC']],
+            limit: 10
+        });
+        return reply.send({ success: true, topRatedTitles });
+    } catch (error) {
+        request.server.log.error(error);
+        return reply.status(500).send({ error: 'Database query failed' });
+    }
+};
