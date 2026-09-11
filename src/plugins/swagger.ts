@@ -102,8 +102,24 @@ const openApiDocument = {
     '/people/{id}': {
       get: {
         tags: ['People'],
-        summary: 'Search fro a person using their ID',
+        summary: 'Search for a person using their ID',
         parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string'}}],
+        responses: {
+          '200': { description: 'The requested person' },
+          '404': { description: 'Person not found' }
+        }
+      }
+    },
+    '/people/{id}/credits': {
+      get: {
+        tags: ['People'],
+        summary: 'Search for a person and their credits',
+        parameters: [{
+          in: 'path',
+          name: 'id',
+          required: true,
+          schema: { type: 'string'}
+        }],
         responses: {
           '200': { description: 'The requested person' },
           '404': { description: 'Person not found' }

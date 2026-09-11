@@ -1,33 +1,42 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import bcrypt from 'bcrypt';
 
-
+/**
+ * Registers a new user in the database.
+ * @route POST /auth/register
+ */
 export const registerUser = async (request: FastifyRequest, reply: FastifyReply) => {
     const { name, password, email } = request.body as { name: string; password: string; email: string };
 
     if (!name || !password || !email) {
         return reply.status(400).send({ error: 'Name, password, and email are required' });
     }
-    const hashedPassword = await bcrypt.hash(password, 10);
 
     try {
-         const existingUser = await request.server.db.User.findOne({ where: { email } });
+        const existingUser = await request.server.db.User.findOne({ where: { email } });
         if (existingUser) {
             return reply.status(409).send({ error: 'Email is already in use' });
         }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
         const newUser = await request.server.db.User.create({
             name,
             password: hashedPassword,
             email
         });
+        
         return reply.status(201).send({ success: true, userId: newUser.id });
     } catch (error) {
         request.server.log.error(error);
         return reply.status(500).send({ error: 'User registration failed' });
     }
-
 }
 
+/**
+ * Authenticates a user and issues a secure JWT token.
+ * @route POST /auth/login
+ */
 export const loginUser = async (request: FastifyRequest, reply: FastifyReply) => {
     const { email, password } = request.body as { email: string; password: string };
 
@@ -37,6 +46,7 @@ export const loginUser = async (request: FastifyRequest, reply: FastifyReply) =>
 
     try {
         const user = await request.server.db.User.findOne({ where: { email } });
+        
         if (!user) {
             return reply.status(401).send({ error: 'Invalid email or password' });
         }
@@ -46,11 +56,11 @@ export const loginUser = async (request: FastifyRequest, reply: FastifyReply) =>
             return reply.status(401).send({ error: 'Invalid email or password' });
         }
 
-        
         const token = await reply.jwtSign(
-            {userId: user.id},
-            {expiresIn: '7d'}
+            { userId: user.id },
+            { expiresIn: '7d' }
         );
+        
         return reply.send({ success: true, message: 'Login successful', token });
     } catch (error) {
         request.server.log.error(error);
@@ -58,38 +68,51 @@ export const loginUser = async (request: FastifyRequest, reply: FastifyReply) =>
     }
 }
 
-
-export const fetchUser = async (request: FastifyRequest, reply: FastifyReply) =>{
+/**
+ * Fetches the currently authenticated user's profile.
+ * @route GET /auth/me
+ * @security Requires Bearer Token
+ */
+export const fetchUser = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
         await request.jwtVerify();
 
-        const decodedToken = request.user as {userId: number};
+        const decodedToken = request.user as { userId: number };
         const user = await request.server.db.User.findByPk(decodedToken.userId, {
-            attributes: ['id', 'name', 'email']
+            attributes: ['id', 'name', 'email'] 
         });
-    if (!user){
-        return reply.status(400).send({error: 'User not found'})
-    }
 
-    return reply.send({ success: true, user})
-    } catch (error){
-        return reply.status(401).send({ error: 'Unauthorized: Invalid or missing token'});
+        if (!user) {
+            return reply.status(404).send({ error: 'User not found' });
+        }
+
+        return reply.send({ success: true, user });
+    } catch (error) {
+        return reply.status(401).send({ error: 'Unauthorized: Invalid or missing token' });
     }
 }
 
+/**
+ * Permanently deletes the currently authenticated user.
+ * @route DELETE /auth/me
+ * @security Requires Bearer Token
+ */
 export const deleteUser = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-       await request.jwtVerify();
-       const decodedToken = request.user as { userId: number};
-       const userId = decodedToken.userId;
+        await request.jwtVerify();
+        
+        const decodedToken = request.user as { userId: number };
+        const userId = decodedToken.userId;
 
-       const deletedCount = await request.server.db.User.destroy({
-        where: {id: userId}
-       });
-       if (deletedCount === 0 ){
-        return reply.send(404).send({ error: 'User not found'})
-       }
-       return reply.send({ success: true, message: 'Account successfully deleted'})
+        const deletedCount = await request.server.db.User.destroy({
+            where: { id: userId }
+        });
+
+        if (deletedCount === 0) {
+            return reply.status(404).send({ error: 'User not found' });
+        }
+        
+        return reply.send({ success: true, message: 'Account successfully deleted' });
         
     } catch (error) {
         return reply.status(401).send({ error: 'Unauthorized' });
