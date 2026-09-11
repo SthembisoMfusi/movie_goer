@@ -7,6 +7,7 @@ import swaggerPlugin from './plugins/swagger.js'
 
 import titleRoutes from './routes/title.routes.js';
 import authRoutes from './routes/auth.routes.js';
+import personRoutes from './routes/person.routes.js'
 
 
 
@@ -25,6 +26,7 @@ fastify.register(fastifyJwt, {
 
 fastify.register(titleRoutes, { prefix: '/titles' });
 fastify.register(authRoutes, { prefix: '/auth' })
+fastify.register(personRoutes, { prefix:'/people'})
 
 
 export { fastify as app};

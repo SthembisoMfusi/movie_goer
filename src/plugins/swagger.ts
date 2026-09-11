@@ -87,6 +87,28 @@ const openApiDocument = {
           '200': { description: 'A list of top-rated movies' }
         }
       }
+    },
+    '/people/search':{
+      get: {
+        tags: ['People'],
+        summary: 'Search for a person by their name ',
+        parameters: [{ in: 'query', name:'q', required: true, schema: { type: 'string'}}],
+        responses: {
+          '200': { description: ' A list of matching people'},
+          '404': { description: 'person not found'}
+        }
+      }
+    },
+    '/people/{id}': {
+      get: {
+        tags: ['People'],
+        summary: 'Search fro a person using their ID',
+        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string'}}],
+        responses: {
+          '200': { description: 'The requested person' },
+          '404': { description: 'Person not found' }
+        }
+      }
     }
   },
   components: {
