@@ -8,6 +8,7 @@ import { Title, initTitleModel } from '../models/Title.model.js';
 import { Person, initPersonModel } from '../models/Person.model.js';
 import { Rating, initRatingModel } from '../models/Rating.model.js';
 import { CastCrew, initCastCrewModel } from '../models/CastCrew.model.js';
+import { initWatchlistModel, Watchlist } from '../models/Watchlist.model.js';
 
 async function sequelizePlugin(fastify: FastifyInstance) {
 
@@ -32,35 +33,38 @@ async function sequelizePlugin(fastify: FastifyInstance) {
     initPersonModel(sequelize);
     initRatingModel(sequelize);
     initCastCrewModel(sequelize);
+    initWatchlistModel(sequelize);
 
     Title.hasOne(Rating, { foreignKey: 'tconst' });
     Rating.belongsTo(Title, { foreignKey: 'tconst' });
 
     Title.belongsToMany(Person, { through: CastCrew, foreignKey: 'tconst', otherKey: 'nconst', constraints: false, unique: false });
-    Person.belongsToMany(Title, { through: CastCrew, foreignKey: 'nconst', otherKey: 'tconst', constrainst: false, unique: false });
+    Person.belongsToMany(Title, { through: CastCrew, foreignKey: 'nconst', otherKey: 'tconst', constraints: false, unique: false });
 
-
+    User.belongsToMany(Title, { through: Watchlist, foreignKey: 'userId', as: 'SavedTitles' });
+    Title.belongsToMany(User, { through: Watchlist, foreignKey: 'titleId' });
+    
     Title.hasMany(CastCrew, { foreignKey: 'tconst' });
     CastCrew.belongsTo(Title, { foreignKey: 'tconst' });
     Person.hasMany(CastCrew, { foreignKey: 'nconst' });
     CastCrew.belongsTo(Person, { foreignKey: 'nconst' });
 
-   
-
+  
     
 
 
-   
+
     fastify.decorate('db', {
         sequelize,
         User,
         Title,
         Person,
         Rating,
-        CastCrew
+        CastCrew,
+        Watchlist
     });
 
-  
+
     fastify.addHook("onClose", async () => {
         await sequelize.close();
     });
