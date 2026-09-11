@@ -34,7 +34,7 @@ export const getTitleById = async (request: FastifyRequest, reply: FastifyReply)
 
     try {
         const title = await request.server.db.Title.findByPk(id, {
-            include: [{ model: request.server.db.Rating, required: false}]
+            include: [{ model: request.server.db.Rating, required: false}, { model: request.server.db.Person, required: false}]
         });
         if (!title) {
             return reply.status(404).send({ error: 'Title not found'});
