@@ -1,51 +1,72 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { Op } from 'sequelize';
 
+/**
+ * Searches for movies by title using a case-insensitive wildcard query.
+ * @route GET /titles/search?q={query}
+ */
 export const searchTitles = async (request: FastifyRequest, reply: FastifyReply) => {
     const query = (request.query as any).q;
-    if (!query){
-        return reply.status(400).send({ error: 'Please provide a search term'});
+    
+    if (!query) {
+        return reply.status(400).send({ error: 'Please provide a search term' });
     }
 
     try {
         const results = await request.server.db.Title.findAll({
-        where: {
-            primaryTitle: {
-                [Op.iLike]: `%${query}%`
+            where: {
+                primaryTitle: {
+                    [Op.iLike]: `%${query}%`
+                },
+                titleType: 'movie'
             },
-            titleType: 'movie'
-        },
-        limit: 10,
-        include: [{ model: request.server.db.Rating, required: false}, ]
-    })
-    return reply.send({ success: true, results })
-    } catch (error){
-        request.server.log.error(error)
-        return reply.status(500).send({ error: 'Database search failed'})
+            limit: 10,
+            include: [{ model: request.server.db.Rating, required: false }]
+        });
+        
+        return reply.send({ success: true, results });
+    } catch (error) {
+        request.server.log.error(error);
+        return reply.status(500).send({ error: 'Database search failed' });
     }
 };
 
-
+/**
+ * Fetches a single title by its ID, including ratings and cast members.
+ * @route GET /titles/:id
+ */
 export const getTitleById = async (request: FastifyRequest, reply: FastifyReply) => {
-    const id = (request.params as any).id;
-    if (!id){
-        return reply.status(400).send({ error: 'Please provide a title ID'});
+    const rawId = (request.params as any).id;
+    
+    if (!rawId) {
+        return reply.status(400).send({ error: 'Please provide a title ID' });
     }
+    
+    const id = rawId.trim();
 
     try {
         const title = await request.server.db.Title.findByPk(id, {
-            include: [{ model: request.server.db.Rating, required: false}, { model: request.server.db.Person, required: false}]
+            include: [
+                { model: request.server.db.Rating, required: false }, 
+                { model: request.server.db.Person, required: false }
+            ]
         });
+
         if (!title) {
-            return reply.status(404).send({ error: 'Title not found'});
+            return reply.status(404).send({ error: 'Title not found' });
         }
+        
         return reply.send({ success: true, title });
-    } catch (error){
-        request.server.log.error(error)
-        return reply.status(500).send({ error: 'Database query failed'});
+    } catch (error) {
+        request.server.log.error(error);
+        return reply.status(500).send({ error: 'Database query failed' });
     }
 }
 
+/**
+ * Fetches the top 10 highest-rated titles in the database.
+ * @route GET /titles/top-rated
+ */
 export const getTopRatedTitles = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
         const topRatedTitles = await request.server.db.Title.findAll({
@@ -57,10 +78,11 @@ export const getTopRatedTitles = async (request: FastifyRequest, reply: FastifyR
                         [Op.gte]: 8.0
                     }
                 }
-            }]  ,
+            }],
             order: [[request.server.db.Rating, 'averageRating', 'DESC']],
             limit: 10
         });
+        
         return reply.send({ success: true, topRatedTitles });
     } catch (error) {
         request.server.log.error(error);
