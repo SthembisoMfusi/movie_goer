@@ -6,14 +6,8 @@ import { Op } from 'sequelize';
  * @route GET /titles/search?q={query}
  */
 export const searchTitles = async (request: FastifyRequest, reply: FastifyReply) => {
-    const query = (request.query as any).q;
-    const page = Math.max(1, parseInt((request.query as any).page) || 1);
-    const limit = Math.min(50, Math.max(1, parseInt((request.query as any).limit) || 10));
+    const { q: query, page, limit } = request.query as { q: string; page: number; limit: number };
     const offset = (page - 1) * limit;
-
-    if (!query) {
-        return reply.status(400).send({ error: 'Please provide a search term' });
-    }
 
     try {
         const { count, rows } = await request.server.db.Title.findAndCountAll({
@@ -27,13 +21,12 @@ export const searchTitles = async (request: FastifyRequest, reply: FastifyReply)
             offset: offset,
             include: [{ model: request.server.db.Rating, required: false }]
         });
-        const totalPages = Math.ceil(count / limit);
-
+        
         return reply.send({
             success: true,
             pagination: {
                 totalItems: count,
-                totalPages: totalPages,
+                totalPages: Math.ceil(count / limit),
                 currentPage: page,
                 itemsPerPage: limit
             },
@@ -50,13 +43,8 @@ export const searchTitles = async (request: FastifyRequest, reply: FastifyReply)
  * @route GET /titles/:id
  */
 export const getTitleById = async (request: FastifyRequest, reply: FastifyReply) => {
-    const rawId = (request.params as any).id;
-
-    if (!rawId) {
-        return reply.status(400).send({ error: 'Please provide a title ID' });
-    }
-
-    const id = rawId.trim();
+    const rawId = (request.params as { id: string }).id;
+    const id = rawId.trim(); 
 
     try {
         const title = await request.server.db.Title.findByPk(id, {
@@ -82,9 +70,9 @@ export const getTitleById = async (request: FastifyRequest, reply: FastifyReply)
  * @route GET /titles/top-rated
  */
 export const getTopRatedTitles = async (request: FastifyRequest, reply: FastifyReply) => {
-    const page = Math.max(1, parseInt((request.query as any).page) || 1); 
-    const limit = Math.min(50, Math.max(1, parseInt((request.query as any).limit) || 10)); 
+    const { page, limit } = request.query as { page: number; limit: number };
     const offset = (page - 1) * limit;
+    
     try {
         const { count, rows } = await request.server.db.Title.findAndCountAll({
             include: [{
@@ -100,6 +88,7 @@ export const getTopRatedTitles = async (request: FastifyRequest, reply: FastifyR
             limit: limit,
             offset: offset 
         });
+        
         return reply.send({ 
             success: true, 
             pagination: {
