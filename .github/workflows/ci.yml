@@ -1,0 +1,49 @@
+name: Node.js CI Pipeline
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: github_runner
+          POSTGRES_PASSWORD: secretpassword
+          POSTGRES_DB: movie_goer_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install Dependencies
+      run: npm ci
+    - name: Type Check
+      run: npx tsc --noEmit 
+    - name: Run Database Seeder and Tests
+      env:
+        DB_USER: github_runner
+        DB_PASSWORD: secretpassword
+        DB_NAME: movie_goer_test
+        DB_HOST: localhost
+        DB_PORT: 5432
+        JWT_SECRET: testing_secret_key_for_ci
+      run: npm run test:ci

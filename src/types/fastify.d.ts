@@ -18,4 +18,10 @@ declare module 'fastify' {
             Watchlist: typeof Watchlist;
         };
     }
+    interface FastifyContextConfig {
+        rateLimit?: {
+            max?: number;
+            timeWindow?: string;
+        };
+    }
 }

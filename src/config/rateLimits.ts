@@ -1,5 +1,4 @@
 import type { FastifyContextConfig } from 'fastify';
-import '@fastify/rate-limit';
 
 export const authRateLimit: FastifyContextConfig = {
     rateLimit: {
