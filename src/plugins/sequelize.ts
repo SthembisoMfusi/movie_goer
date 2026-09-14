@@ -2,13 +2,12 @@ import { Sequelize } from 'sequelize';
 import fp from 'fastify-plugin';
 import type { FastifyInstance } from 'fastify';
 
-// Import all your models and their init functions
 import { User, initUserModel } from '../models/User.model.js';
 import { Title, initTitleModel } from '../models/Title.model.js';
 import { Person, initPersonModel } from '../models/Person.model.js';
 import { Rating, initRatingModel } from '../models/Rating.model.js';
 import { CastCrew, initCastCrewModel } from '../models/CastCrew.model.js';
-import { initWatchlistModel, Watchlist } from '../models/Watchlist.model.js';
+import {  Watchlist, initWatchlistModel } from '../models/Watchlist.model.js';
 
 async function sequelizePlugin(fastify: FastifyInstance) {
 
@@ -38,19 +37,18 @@ async function sequelizePlugin(fastify: FastifyInstance) {
     Title.hasOne(Rating, { foreignKey: 'tconst' });
     Rating.belongsTo(Title, { foreignKey: 'tconst' });
 
-    Title.belongsToMany(Person, { through: CastCrew, foreignKey: 'tconst', otherKey: 'nconst', constraints: false, unique: false });
-    Person.belongsToMany(Title, { through: CastCrew, foreignKey: 'nconst', otherKey: 'tconst', constraints: false, unique: false });
+    Title.belongsToMany(Person, { through: CastCrew, foreignKey: 'tconst', otherKey: 'nconst', constraints: false });
+    Person.belongsToMany(Title, { through: CastCrew, foreignKey: 'nconst', otherKey: 'tconst', constraints: false });
 
-    User.belongsToMany(Title, { through: Watchlist, foreignKey: 'userId', as: 'SavedTitles' });
-    Title.belongsToMany(User, { through: Watchlist, foreignKey: 'titleId' });
-    
+    User.belongsToMany(Title, { through: Watchlist, foreignKey: 'userId', otherKey: 'titleId', as: 'SavedTitles' });
+    Title.belongsToMany(User, { through: Watchlist, foreignKey: 'titleId', otherKey: 'userId' });
+
     Title.hasMany(CastCrew, { foreignKey: 'tconst' });
     CastCrew.belongsTo(Title, { foreignKey: 'tconst' });
     Person.hasMany(CastCrew, { foreignKey: 'nconst' });
     CastCrew.belongsTo(Person, { foreignKey: 'nconst' });
 
-  
-    
+
 
 
 
