@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { app } from '../src/app.js';
+import { app } from '../../src/app.js';
 
 describe('Watchlist Routes', () => {
     let authToken = '';
     let testUserId: number;
     const testMovieId = 'tt0111161'; // The Shawshank Redemption
-    
+
     const testUser = {
         name: 'Watchlist Tester',
         email: 'watchlist@example.com',
@@ -14,10 +14,10 @@ describe('Watchlist Routes', () => {
 
     beforeAll(async () => {
         await app.ready();
-        
+
         await app.db.User.destroy({ where: { email: testUser.email } });
 
-        
+
         const registerRes = await app.inject({
             method: 'POST',
             url: '/auth/register',
@@ -45,7 +45,7 @@ describe('Watchlist Routes', () => {
             method: 'GET',
             url: '/watchlist'
         });
-        
+
         expect(response.statusCode, `Security failure. Expected 401 Unauthorized for a request without a token, but got ${response.statusCode}`).toBe(401);
     });
 
@@ -55,9 +55,9 @@ describe('Watchlist Routes', () => {
             url: `/watchlist/${testMovieId}`,
             headers: { authorization: `Bearer ${authToken}` }
         });
-        
+
         const body = response.json();
-        
+
         expect(response.statusCode, `Add to watchlist failed. Expected 201 Created, but got ${response.statusCode}. Error: ${body.error}`).toBe(201);
         expect(body.success, 'Response should indicate success: true.').toBe(true);
     });
@@ -68,9 +68,9 @@ describe('Watchlist Routes', () => {
             url: `/watchlist/${testMovieId}`,
             headers: { authorization: `Bearer ${authToken}` }
         });
-        
+
         const body = response.json();
-        
+
         expect(response.statusCode, `Duplicate prevention failed. Expected 409 Conflict, but got ${response.statusCode}.`).toBe(409);
         expect(body.error, 'Expected a specific error message about the movie already being in the watchlist.').toBe('Movie is already in your watchlist');
     });
@@ -81,10 +81,10 @@ describe('Watchlist Routes', () => {
             url: '/watchlist',
             headers: { authorization: `Bearer ${authToken}` }
         });
-        
+
         const body = response.json();
         const watchlist = body.watchlist;
-        
+
         expect(response.statusCode, `Fetch watchlist failed. Expected 200, got ${response.statusCode}`).toBe(200);
         expect(Array.isArray(watchlist), 'The watchlist payload should be an array.').toBe(true);
         expect(watchlist.length, 'The watchlist should contain the 1 movie we just added.').toBe(1);
@@ -97,9 +97,9 @@ describe('Watchlist Routes', () => {
             url: `/watchlist/${testMovieId}`,
             headers: { authorization: `Bearer ${authToken}` }
         });
-        
+
         const body = response.json();
-        
+
         expect(response.statusCode, `Remove from watchlist failed. Expected 200, got ${response.statusCode}. Error: ${body.error}`).toBe(200);
         expect(body.success, 'Response should indicate success: true upon deletion.').toBe(true);
     });
@@ -110,9 +110,9 @@ describe('Watchlist Routes', () => {
             url: `/watchlist/${testMovieId}`,
             headers: { authorization: `Bearer ${authToken}` }
         });
-        
+
         const body = response.json();
-        
+
         expect(response.statusCode, `Validation failure. Expected 404 when deleting a non-existent watchlist item, but got ${response.statusCode}`).toBe(404);
         expect(body.error, 'Expected a specific error message about the movie not being found.').toBe('Movie not found in your watchlist');
     });
@@ -123,10 +123,10 @@ describe('Watchlist Routes', () => {
             url: '/watchlist',
             headers: { authorization: `Bearer ${authToken}` }
         });
-        
+
         const body = response.json();
-    
-        
+
+
         expect(response.statusCode, `Fetch watchlist failed. Expected 200, got ${response.statusCode}`).toBe(200);
         expect(body.watchlist.length, 'The watchlist should be completely empty after the deletion test.').toBe(0);
     });
