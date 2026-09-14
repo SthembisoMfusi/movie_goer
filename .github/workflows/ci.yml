@@ -38,6 +38,7 @@ jobs:
       run: npm ci
     - name: Type Check
       run: npx tsc --noEmit 
+
     - name: Run Database Seeder and Tests
       env:
         DB_USER: github_runner
