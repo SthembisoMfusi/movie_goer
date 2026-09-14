@@ -64,7 +64,10 @@ const openApiDocument = {
         summary: 'Search for movies by title',
         parameters: [{ in: 'query', name: 'q', required: true, schema: { type: 'string' } }],
         responses: {
-          '200': { description: 'A list of matching movies' }
+          '200': { 
+            description: 'A list of matching movies',
+            content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Title' } } } }
+          }
         }
       }
     },
@@ -74,7 +77,10 @@ const openApiDocument = {
         summary: 'Get a movie by ID',
         parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
         responses: {
-          '200': { description: 'The requested movie' },
+          '200': { 
+            description: 'The requested movie',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Title' } } }
+          },
           '404': { description: 'Movie not found' }
         }
       }
@@ -84,18 +90,23 @@ const openApiDocument = {
         tags: ['Titles'],
         summary: 'Get the top-rated movies',
         responses: {
-          '200': { description: 'A list of top-rated movies' }
+          '200': { 
+            description: 'A list of top-rated movies',
+            content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Title' } } } }
+          }
         }
       }
     },
     '/people/search':{
       get: {
         tags: ['People'],
-        summary: 'Search for a person by their name ',
+        summary: 'Search for a person by their name',
         parameters: [{ in: 'query', name:'q', required: true, schema: { type: 'string'}}],
         responses: {
-          '200': { description: ' A list of matching people'},
-          '404': { description: 'person not found'}
+          '200': { 
+            description: ' A list of matching people',
+            content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Person' } } } }
+          }
         }
       }
     },
@@ -105,7 +116,10 @@ const openApiDocument = {
         summary: 'Search for a person using their ID',
         parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string'}}],
         responses: {
-          '200': { description: 'The requested person' },
+          '200': { 
+            description: 'The requested person',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Person' } } }
+          },
           '404': { description: 'Person not found' }
         }
       }
@@ -114,15 +128,50 @@ const openApiDocument = {
       get: {
         tags: ['People'],
         summary: 'Search for a person and their credits',
-        parameters: [{
-          in: 'path',
-          name: 'id',
-          required: true,
-          schema: { type: 'string'}
-        }],
+        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string'}}],
         responses: {
-          '200': { description: 'The requested person' },
+          '200': { description: 'The requested person and their associated movies' },
           '404': { description: 'Person not found' }
+        }
+      }
+    },
+    // ================= NEW WATCHLIST ROUTES =================
+    '/watchlist': {
+      get: {
+        tags: ['Watchlist'],
+        summary: 'Get logged-in user\'s watchlist',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { 
+            description: 'A list of saved movies',
+            content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Title' } } } }
+          },
+          '401': { description: 'Unauthorized' }
+        }
+      }
+    },
+    '/watchlist/{titleId}': {
+      post: {
+        tags: ['Watchlist'],
+        summary: 'Add a movie to the watchlist',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ in: 'path', name: 'titleId', required: true, schema: { type: 'string' } }],
+        responses: {
+          '201': { description: 'Movie added to watchlist' },
+          '404': { description: 'Movie not found' },
+          '409': { description: 'Movie already in watchlist' },
+          '401': { description: 'Unauthorized' }
+        }
+      },
+      delete: {
+        tags: ['Watchlist'],
+        summary: 'Remove a movie from the watchlist',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ in: 'path', name: 'titleId', required: true, schema: { type: 'string' } }],
+        responses: {
+          '200': { description: 'Movie removed from watchlist' },
+          '404': { description: 'Movie not in watchlist' },
+          '401': { description: 'Unauthorized' }
         }
       }
     }
@@ -141,20 +190,47 @@ const openApiDocument = {
         type: 'object',
         required: ['email', 'password'],
         properties: { email: { type: 'string', format: 'email' }, password: { type: 'string', format: 'password' } }
+      },
+      User: {
+        type: 'object',
+        properties: { id: { type: 'integer' }, name: { type: 'string' }, email: { type: 'string' } }
+      },
+      Title: {
+        type: 'object',
+        properties: {
+          tconst: { type: 'string' },
+          titleType: { type: 'string' },
+          primaryTitle: { type: 'string' },
+          startYear: { type: 'string' },
+          runtimeMinutes: { type: 'string' },
+          genres: { type: 'string' },
+          Rating: { $ref: '#/components/schemas/Rating' }
+        }
+      },
+      Person: {
+        type: 'object',
+        properties: {
+          nconst: { type: 'string' },
+          primaryName: { type: 'string' },
+          birthYear: { type: 'string' },
+          primaryProfession: { type: 'string' }
+        }
+      },
+      Rating: {
+        type: 'object',
+        properties: { averageRating: { type: 'number' }, numVotes: { type: 'integer' } }
       }
     }
   }
 };
 
 async function swaggerConfig(fastify: FastifyInstance) {
-
   await fastify.register(fastifySwagger, {
     mode: 'static',
     specification: {
       document: openApiDocument as any
     }
   });
-
 
   await fastify.register(fastifySwaggerUi, {
     routePrefix: '/docs',
