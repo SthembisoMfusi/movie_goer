@@ -7,27 +7,41 @@ import { Op } from 'sequelize';
  */
 export const searchTitles = async (request: FastifyRequest, reply: FastifyReply) => {
     const query = (request.query as any).q;
-    
+    const page = Math.max(1, parseInt((request.query as any).page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt((request.query as any).limit) || 10));
+    const offset = (page - 1) * limit;
+
     if (!query) {
         return reply.status(400).send({ error: 'Please provide a search term' });
     }
 
     try {
-        const results = await request.server.db.Title.findAll({
+        const { count, rows } = await request.server.db.Title.findAndCountAll({
             where: {
                 primaryTitle: {
                     [Op.iLike]: `%${query}%`
                 },
                 titleType: 'movie'
             },
-            limit: 10,
+            limit: limit,
+            offset: offset,
             include: [{ model: request.server.db.Rating, required: false }]
         });
-        
-        return reply.send({ success: true, results });
+        const totalPages = Math.ceil(count / limit);
+
+        return reply.send({
+            success: true,
+            pagination: {
+                totalItems: count,
+                totalPages: totalPages,
+                currentPage: page,
+                itemsPerPage: limit
+            },
+            results: rows
+        });
     } catch (error) {
         request.server.log.error(error);
-        return reply.status(500).send({ error: 'Database search failed' });
+        return reply.status(500).send({ error: 'Database search failed' })
     }
 };
 
@@ -37,17 +51,17 @@ export const searchTitles = async (request: FastifyRequest, reply: FastifyReply)
  */
 export const getTitleById = async (request: FastifyRequest, reply: FastifyReply) => {
     const rawId = (request.params as any).id;
-    
+
     if (!rawId) {
         return reply.status(400).send({ error: 'Please provide a title ID' });
     }
-    
+
     const id = rawId.trim();
 
     try {
         const title = await request.server.db.Title.findByPk(id, {
             include: [
-                { model: request.server.db.Rating, required: false }, 
+                { model: request.server.db.Rating, required: false },
                 { model: request.server.db.Person, required: false }
             ]
         });
@@ -55,7 +69,7 @@ export const getTitleById = async (request: FastifyRequest, reply: FastifyReply)
         if (!title) {
             return reply.status(404).send({ error: 'Title not found' });
         }
-        
+
         return reply.send({ success: true, title });
     } catch (error) {
         request.server.log.error(error);
@@ -68,8 +82,11 @@ export const getTitleById = async (request: FastifyRequest, reply: FastifyReply)
  * @route GET /titles/top-rated
  */
 export const getTopRatedTitles = async (request: FastifyRequest, reply: FastifyReply) => {
+    const page = Math.max(1, parseInt((request.query as any).page) || 1); 
+    const limit = Math.min(50, Math.max(1, parseInt((request.query as any).limit) || 10)); 
+    const offset = (page - 1) * limit;
     try {
-        const topRatedTitles = await request.server.db.Title.findAll({
+        const { count, rows } = await request.server.db.Title.findAndCountAll({
             include: [{
                 model: request.server.db.Rating,
                 required: true,
@@ -80,10 +97,19 @@ export const getTopRatedTitles = async (request: FastifyRequest, reply: FastifyR
                 }
             }],
             order: [[request.server.db.Rating, 'averageRating', 'DESC']],
-            limit: 10
+            limit: limit,
+            offset: offset 
         });
-        
-        return reply.send({ success: true, topRatedTitles });
+        return reply.send({ 
+            success: true, 
+            pagination: {
+                totalItems: count,
+                totalPages: Math.ceil(count / limit),
+                currentPage: page,
+                itemsPerPage: limit
+            },
+            topRatedTitles: rows 
+        });
     } catch (error) {
         request.server.log.error(error);
         return reply.status(500).send({ error: 'Database query failed' });

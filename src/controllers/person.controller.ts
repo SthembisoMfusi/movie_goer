@@ -7,21 +7,34 @@ import { Op } from 'sequelize';
  */
 export const searchPeople = async (request: FastifyRequest, reply: FastifyReply) => {
     const query = (request.query as any).q;
+    const page = Math.max(1, parseInt((request.query as any).page) || 1); 
+    const limit = Math.min(50, Math.max(1, parseInt((request.query as any).limit) || 10)); 
+    const offset = (page - 1) * limit;
     
     if (!query) {
         return reply.status(400).send({ error: 'Please provide a search term' })
     }
     
     try {
-        const results = await request.server.db.Person.findAll({
+        const { count, rows } = await request.server.db.Person.findAndCountAll({
             where: {
                 primaryName: {
                     [Op.iLike]: `%${query}%`
                 },
             },
-            limit: 5,
-        })
-        return reply.send({ success: true, results });
+            limit: limit,
+            offset: offset 
+        });
+        return reply.send({ 
+            success: true, 
+            pagination: {
+                totalItems: count,
+                totalPages: Math.ceil(count / limit),
+                currentPage: page,
+                itemsPerPage: limit
+            },
+            results: rows 
+        });
     } catch (error){
         request.server.log.error(error)
         return reply.status(500).send({ error: 'Database search failed' })
