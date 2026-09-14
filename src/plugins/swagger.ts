@@ -61,12 +61,38 @@ const openApiDocument = {
     '/titles/search': {
       get: {
         tags: ['Titles'],
-        summary: 'Search for movies by title',
-        parameters: [{ in: 'query', name: 'q', required: true, schema: { type: 'string' } }],
+        summary: 'Search for movies by title with pagination',
+        parameters: [
+          { in: 'query', name: 'q', required: true, schema: { type: 'string' }, description: 'The search term (e.g., "Batman")' },
+          { in: 'query', name: 'page', required: false, schema: { type: 'integer', default: 1 }, description: 'Page number for pagination' },
+          { in: 'query', name: 'limit', required: false, schema: { type: 'integer', default: 10 }, description: 'Items per page (Max: 50)' }
+        ],
         responses: {
           '200': { 
-            description: 'A list of matching movies',
-            content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Title' } } } }
+            description: 'A paginated list of matching movies',
+            content: { 
+              'application/json': { 
+                schema: { 
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    pagination: {
+                      type: 'object',
+                      properties: {
+                        totalItems: { type: 'integer' },
+                        totalPages: { type: 'integer' },
+                        currentPage: { type: 'integer' },
+                        itemsPerPage: { type: 'integer' }
+                      }
+                    },
+                    results: { 
+                      type: 'array', 
+                      items: { $ref: '#/components/schemas/Title' } 
+                    }
+                  }
+                } 
+              } 
+            }
           }
         }
       }
@@ -85,14 +111,32 @@ const openApiDocument = {
         }
       }
     },
-    '/titles/top-rated': {
+  '/titles/top-rated': {
       get: {
         tags: ['Titles'],
         summary: 'Get the top-rated movies',
+        parameters: [
+          { in: 'query', name: 'page', required: false, schema: { type: 'integer', default: 1 } },
+          { in: 'query', name: 'limit', required: false, schema: { type: 'integer', default: 10 } }
+        ],
         responses: {
           '200': { 
-            description: 'A list of top-rated movies',
-            content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Title' } } } }
+            description: 'A paginated list of top-rated movies',
+            content: { 
+              'application/json': { 
+                schema: { 
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    pagination: {
+                      type: 'object',
+                      properties: { totalItems: { type: 'integer' }, totalPages: { type: 'integer' }, currentPage: { type: 'integer' }, itemsPerPage: { type: 'integer' } }
+                    },
+                    topRatedTitles: { type: 'array', items: { $ref: '#/components/schemas/Title' } } 
+                  }
+                } 
+              } 
+            }
           }
         }
       }
@@ -101,11 +145,29 @@ const openApiDocument = {
       get: {
         tags: ['People'],
         summary: 'Search for a person by their name',
-        parameters: [{ in: 'query', name:'q', required: true, schema: { type: 'string'}}],
+        parameters: [
+          { in: 'query', name:'q', required: true, schema: { type: 'string' } },
+          { in: 'query', name: 'page', required: false, schema: { type: 'integer', default: 1 } },
+          { in: 'query', name: 'limit', required: false, schema: { type: 'integer', default: 10 } }
+        ],
         responses: {
           '200': { 
-            description: ' A list of matching people',
-            content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Person' } } } }
+            description: 'A paginated list of matching people',
+            content: { 
+              'application/json': { 
+                schema: { 
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    pagination: {
+                      type: 'object',
+                      properties: { totalItems: { type: 'integer' }, totalPages: { type: 'integer' }, currentPage: { type: 'integer' }, itemsPerPage: { type: 'integer' } }
+                    },
+                    results: { type: 'array', items: { $ref: '#/components/schemas/Person' } } 
+                  }
+                } 
+              } 
+            }
           }
         }
       }
@@ -135,7 +197,6 @@ const openApiDocument = {
         }
       }
     },
-    // ================= NEW WATCHLIST ROUTES =================
     '/watchlist': {
       get: {
         tags: ['Watchlist'],
