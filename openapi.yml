@@ -1,0 +1,565 @@
+openapi: 3.0.3
+info:
+  title: movieGoer API
+  description: >
+    An enterprise-grade REST API for an IMDb clone. 
+    Built with Fastify, Sequelize, and PostgreSQL. Features robust pagination, rate-limiting, and JWT authentication.
+  version: "1.0.0"
+  contact:
+    name: API Support
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+
+tags:
+  - name: Auth
+    description: User registration, login, and secure profile management
+  - name: Titles
+    description: Search and retrieve movies, TV shows, and their ratings
+  - name: People
+    description: Lookup actors, directors, writers, and their filmography
+  - name: Watchlist
+    description: Manage authenticated users' saved movies
+
+paths:
+  # ================= AUTH ROUTES =================
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      description: Creates a new user account and securely hashes the password.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterInput'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  userId:
+                    type: integer
+                    example: 1
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '409':
+          description: Email already in use
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Email is already in use"
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login and receive a JWT
+      description: Authenticates user credentials and returns a secure JSON Web Token valid for 7 days.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginInput'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Login successful"
+                  token:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5c..."
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Invalid email or password"
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current logged-in user profile
+      description: Validates the Bearer token and returns the user's details (excluding password).
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # ================= TITLE ROUTES =================
+  /titles/search:
+    get:
+      tags: [Titles]
+      summary: Search for movies by title
+      description: Performs a case-insensitive wildcard search using GIN Trigram indexes for maximum performance.
+      parameters:
+        - $ref: '#/components/parameters/SearchQuery'
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LimitQuery'
+      responses:
+        '200':
+          description: A paginated list of matching movies
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMeta'
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Title'
+
+  /titles/{id}:
+    get:
+      tags: [Titles]
+      summary: Get a movie by ID
+      description: Fetches complete movie details including average rating and associated cast members.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            example: "tt0111161"
+          description: The alphanumeric tconst ID of the title
+      responses:
+        '200':
+          description: The requested movie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  title:
+                    $ref: '#/components/schemas/Title'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /titles/top-rated:
+    get:
+      tags: [Titles]
+      summary: Get the top-rated movies
+      description: Fetches titles sorted by their average IMDB rating in descending order.
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LimitQuery'
+      responses:
+        '200':
+          description: A paginated list of top-rated movies
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMeta'
+                  topRatedTitles:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Title'
+
+  # ================= PEOPLE ROUTES =================
+  /people/search:
+    get:
+      tags: [People]
+      summary: Search for an actor/director by name
+      parameters:
+        - $ref: '#/components/parameters/SearchQuery'
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LimitQuery'
+      responses:
+        '200':
+          description: A paginated list of matching people
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMeta'
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Person'
+
+  /people/{id}:
+    get:
+      tags: [People]
+      summary: Get a person's basic profile by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            example: "nm0000151"
+      responses:
+        '200':
+          description: The requested person
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  person:
+                    $ref: '#/components/schemas/Person'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /people/{id}/credits:
+    get:
+      tags: [People]
+      summary: Get a person's full filmography
+      description: Fetches an actor or director along with every movie they worked on and their specific job title (via junction table).
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            example: "nm0000151"
+      responses:
+        '200':
+          description: The requested person and their associated movies
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  person:
+                    allOf:
+                      - $ref: '#/components/schemas/Person'
+                      - type: object
+                        properties:
+                          Titles:
+                            type: array
+                            items:
+                              allOf:
+                                - $ref: '#/components/schemas/Title'
+                                - type: object
+                                  properties:
+                                    CastCrew:
+                                      $ref: '#/components/schemas/CastCrewDetails'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  # ================= WATCHLIST ROUTES =================
+  /watchlist:
+    get:
+      tags: [Watchlist]
+      summary: Get logged-in user's watchlist
+      description: Fetches all titles saved by the authenticated user.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: A list of saved movies
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  watchlist:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Title'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /watchlist/{titleId}:
+    post:
+      tags: [Watchlist]
+      summary: Add a movie to the watchlist
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: titleId
+          required: true
+          schema:
+            type: string
+            example: "tt0111161"
+      responses:
+        '201':
+          description: Movie added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+              example:
+                success: true
+                message: "Added to watchlist"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          description: Movie already exists in watchlist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Movie is already in your watchlist"
+                
+    delete:
+      tags: [Watchlist]
+      summary: Remove a movie from the watchlist
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: titleId
+          required: true
+          schema:
+            type: string
+            example: "tt0111161"
+      responses:
+        '200':
+          description: Movie removed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+              example:
+                success: true
+                message: "Removed from watchlist"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Movie not in watchlist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Movie not found in your watchlist"
+
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "Enter your JWT token in the format: Bearer <token>"
+
+  parameters:
+    SearchQuery:
+      in: query
+      name: q
+      required: true
+      schema:
+        type: string
+      description: The search term (e.g., "Batman" or "Morgan Freeman")
+    PageQuery:
+      in: query
+      name: page
+      required: false
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+      description: Page number for pagination
+    LimitQuery:
+      in: query
+      name: limit
+      required: false
+      schema:
+        type: integer
+        default: 10
+        minimum: 1
+        maximum: 50
+      description: Items per page (Max 50)
+
+  responses:
+    UnauthorizedError:
+      description: Missing or invalid Bearer Token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Unauthorized: Invalid or missing token"
+    NotFoundError:
+      description: Resource not found in database
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Not found"
+    BadRequestError:
+      description: Malformed request or missing parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Bad Request"
+            message: "body/password must NOT have fewer than 6 characters"
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+          description: Detailed validation error (if provided by Fastify)
+
+    SuccessMessage:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+
+    PaginationMeta:
+      type: object
+      properties:
+        totalItems:
+          type: integer
+          example: 125
+        totalPages:
+          type: integer
+          example: 13
+        currentPage:
+          type: integer
+          example: 1
+        itemsPerPage:
+          type: integer
+          example: 10
+
+    RegisterInput:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+          example: "John Doe"
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+        password:
+          type: string
+          format: password
+          example: "securepassword123"
+          minLength: 6
+
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+        password:
+          type: string
+          format: password
+          example: "securepassword123"
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "John Doe"
+        email:
+          type: string
+          example: "john@example.com"
+
+    Title:
+      type: object
+      properties:
+        tconst:
+          type: string
+          example: "tt0111161"
+        titleType:
+          type: string
+          example: "movie"
+        primaryTitle:
+          type: string
+          example: "The Shawshank Redemption"
+        startYear:
+          type: string
+          example: "1994"
+        runtimeMinutes:
+          type: string
+          example: "142"
+        genres:
+          type: string
+          example: "Drama"
+        Rating:
+          $ref: '#/components/schemas/Rating'
+
+    Person:
+      type: object
+      properties:
+        nconst:
+          type: string
+          example: "nm0000151"
