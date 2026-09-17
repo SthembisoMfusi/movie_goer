@@ -51,8 +51,9 @@ export default function Login() {
 
       <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div>
-          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Email</label>
+          <label htmlFor="email" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Email</label>
           <input 
+          id='email'
             type="email" 
             required 
             value={email}
@@ -62,8 +63,9 @@ export default function Login() {
         </div>
         
         <div>
-          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Password</label>
+          <label htmlFor='password' style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Password</label>
           <input 
+            id='password'
             type="password" 
             required 
             value={password}

@@ -5,16 +5,18 @@
   "main": "app.ts",
   "scripts": {
     "test": "vitest",
-    "test:ci": "tsx scripts/seed-ci.ts && vitest run",
+    "test:e2e": "cd frontend && npx playwright test",
+    "test:e2e:ui": "cd frontend && npx playwright test --ui",
     "typecheck": "tsc --noEmit",
     "start": "tsx src/app.ts",
     "dev": "tsx watch src/app.ts"
-  },
+},
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@fastify/cors": "^11.3.0",
     "@fastify/jwt": "^10.2.2",
     "@fastify/swagger": "^9.8.1",
     "@fastify/swagger-ui": "^6.1.1",
