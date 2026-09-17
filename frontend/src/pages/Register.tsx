@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
 export default function Register() {
@@ -30,69 +30,73 @@ export default function Register() {
         setError(data.error || data.message || 'Registration failed');
       }
     } catch (err) {
+        console.error(err)
       setError('A network error occurred. Please try again.');
-      console.error(err)
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div style={{ maxWidth: '400px', margin: '4rem auto', padding: '2rem', border: '1px solid #ddd', borderRadius: '8px', background: 'white' }}>
-      <h2 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>Create Account</h2>
+    <div className="max-w-md mx-auto mt-16 p-8 bg-white border border-gray-300 rounded-lg shadow-sm">
+      <h2 className="text-2xl font-semibold text-center mb-6 text-gray-900">Create Account</h2>
       
       {error && (
-        <div style={{ background: '#ffebee', color: '#c62828', padding: '0.8rem', borderRadius: '4px', marginBottom: '1rem', textAlign: 'center' }}>
+        <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-center text-sm font-medium">
           {error}
         </div>
       )}
 
-      <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <form onSubmit={handleRegister} className="flex flex-col gap-4">
         <div>
-          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Your Name</label>
+          <label className="block mb-1 font-semibold text-gray-900 text-sm">Your Name</label>
           <input 
             type="text" 
             required 
             value={name}
             onChange={(e) => setName(e.target.value)}
-            style={{ width: '100%', padding: '0.8rem', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
+            className="w-full p-2 border border-gray-400 rounded bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-imdb-yellow focus:border-transparent"
           />
         </div>
 
         <div>
-          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Email</label>
+          <label className="block mb-1 font-semibold text-gray-900 text-sm">Email</label>
           <input 
             type="email" 
             required 
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            style={{ width: '100%', padding: '0.8rem', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
+            className="w-full p-2 border border-gray-400 rounded bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-imdb-yellow focus:border-transparent"
           />
         </div>
         
         <div>
-          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Password</label>
+          <label className="block mb-1 font-semibold text-gray-900 text-sm">Password</label>
           <input 
             type="password" 
             required 
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="At least 6 characters"
-            style={{ width: '100%', padding: '0.8rem', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
+            className="w-full p-2 border border-gray-400 rounded bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-imdb-yellow focus:border-transparent"
           />
         </div>
 
         <button 
           type="submit" 
           disabled={isLoading}
-          style={{ background: '#f5c518', color: 'black', padding: '0.8rem', border: 'none', borderRadius: '4px', fontWeight: 'bold', fontSize: '1rem', cursor: isLoading ? 'not-allowed' : 'pointer', marginTop: '1rem' }}
+          className={`mt-4 bg-imdb-yellow text-black font-bold py-2 px-4 rounded transition-colors duration-200 
+            ${isLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-yellow-500'}`}
         >
           {isLoading ? 'Creating Account...' : 'Create your IMDb account'}
         </button>
       </form>
 
-      <p style={{ textAlign: 'center', marginTop: '1.5rem', color: '#555' }}>
-        Already have an account? <Link to="/login" style={{ color: '#0066c0', textDecoration: 'none' }}>Sign In</Link>
+      <p className="text-center mt-6 text-sm text-gray-700">
+        Already have an account?{' '}
+        <Link to="/login" className="text-blue-600 hover:text-blue-800 hover:underline">
+          Sign In
+        </Link>
       </p>
     </div>
   );
