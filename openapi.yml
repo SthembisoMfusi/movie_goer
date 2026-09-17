@@ -260,7 +260,7 @@ paths:
     get:
       tags: [People]
       summary: Get a person's full filmography
-      description: Fetches an actor or director along with every movie they worked on and their specific job title (via junction table).
+      description: Fetches an actor or director along with every movie they worked on. Highly optimized and paginated.
       parameters:
         - in: path
           name: id
@@ -268,6 +268,8 @@ paths:
           schema:
             type: string
             example: "nm0000151"
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LimitQuery'
       responses:
         '200':
           description: The requested person and their associated movies
@@ -278,24 +280,21 @@ paths:
                 properties:
                   success:
                     type: boolean
-                    example: true
                   person:
-                    allOf:
-                      - $ref: '#/components/schemas/Person'
-                      - type: object
-                        properties:
-                          Titles:
-                            type: array
-                            items:
-                              allOf:
-                                - $ref: '#/components/schemas/Title'
-                                - type: object
-                                  properties:
-                                    CastCrew:
-                                      $ref: '#/components/schemas/CastCrewDetails'
+                    $ref: '#/components/schemas/Person'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMeta'
+                  credits:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: '#/components/schemas/CastCrewDetails'
+                        - type: object
+                          properties:
+                            Title:
+                              $ref: '#/components/schemas/Title'
         '404':
           $ref: '#/components/responses/NotFoundError'
-
   # ================= WATCHLIST ROUTES =================
   /watchlist:
     get:
@@ -563,3 +562,28 @@ components:
         nconst:
           type: string
           example: "nm0000151"
+    Rating:
+      type: object
+      properties:
+        averageRating:
+          type: number
+          format: float
+          example: 9.3
+        numVotes:
+          type: integer
+          example: 2700000
+
+    CastCrewDetails:
+      type: object
+      description: The junction table data mapping a person's role to a movie.
+      properties:
+        category:
+          type: string
+          example: "actor"
+        job:
+          type: string
+          nullable: true
+          example: null
+        characters:
+          type: string
+          example: "[\"Ellis Boyd 'Red' Redding\"]"

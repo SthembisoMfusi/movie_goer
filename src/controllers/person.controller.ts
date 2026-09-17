@@ -63,24 +63,37 @@ export const getPersonById = async (request: FastifyRequest, reply: FastifyReply
 export const getPersonCredits = async (request: FastifyRequest, reply: FastifyReply) =>{
     const rawId = (request.params as { id: string }).id;
     const id = rawId.trim(); 
-    
+    const { page, limit } = request.query as { page: number; limit: number};
+    const offset = (page -1 ) * limit;
+
     try {
-        const person = await request.server.db.Person.findByPk(id, {
+        const person = await request.server.db.Person.findByPk(id);
+        
+        if (!person) return reply.status(404).send({ error: 'Person not found'})
+
+
+        const { count, rows } = await request.server.db.CastCrew.findAndCountAll({
+            where: {nconst: id},
+            limit: limit,
+            offset: offset,
             include: [{
                 model: request.server.db.Title,
-                through: {
-                    attributes: ['category', 'job', 'characters']
-                }
+                required: true,
             }]
-        });
-        
-        if (!person){
-            return reply.status(404).send({ error: 'Person not found' });
-        }
-        
-        return reply.send({ success: true, person });
+        })
+        return reply.send({
+            success: true,
+            person: person,
+            pagination: {
+                totalItems: count,
+                totalPages: Math.ceil(count/limit),
+                currentPage: page,
+                itemsPerPage: limit
+            },
+            credits: rows
+        })
     } catch (error) {
         request.server.log.error(error);
-        return reply.status(500).send({ error: 'Database query failed' });
+        return reply.status(500).send({ error: 'Database query failed'});
     }
 }

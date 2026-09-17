@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { app } from '../../src/app.js';
+import { Title } from '../../src/models/Title.model';
 
 describe('Person Routes', () => {
 
@@ -57,7 +58,11 @@ describe('Person Routes', () => {
 
         expect(response.statusCode, `Credits query failed. Expected 200, but received ${response.statusCode}. Check the junction table associations.`).toBe(200);
         expect(body.person, 'The response body is missing the "person" payload.').toBeDefined();
-        expect(body.person.Titles, 'Association Failure: The Person object is missing the nested Titles array from the CastCrew junction table.').toBeDefined();
-        expect(Array.isArray(body.person.Titles), 'The nested Titles property must be formatted as an array.').toBe(true);
+        expect(body.credits, 'Association Failure: The Person object is missing the nested Titles array from the CastCrew junction table.').toBeDefined();
+        expect(Array.isArray(body.credits), 'The nested Titles property must be formatted as an array.').toBe(true);
+
+        if (body.credits.length > 0){
+            expect(body.credits[0].Title, 'The CastCrew row must include the nexted Title object').toBeDefined();
+        }
     });
 });
