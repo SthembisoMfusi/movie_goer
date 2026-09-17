@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { app } from '../../src/app.js';
-import { Title } from '../../src/models/Title.model';
 
 describe('Person Routes', () => {
 
