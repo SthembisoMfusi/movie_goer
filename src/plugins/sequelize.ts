@@ -40,8 +40,8 @@ async function sequelizePlugin(fastify: FastifyInstance) {
     Title.belongsToMany(Person, { through: CastCrew, foreignKey: 'tconst', otherKey: 'nconst', constraints: false });
     Person.belongsToMany(Title, { through: CastCrew, foreignKey: 'nconst', otherKey: 'tconst', constraints: false });
 
-    User.belongsToMany(Title, { through: Watchlist, foreignKey: 'userId', otherKey: 'titleId', as: 'SavedTitles' });
-    Title.belongsToMany(User, { through: Watchlist, foreignKey: 'titleId', otherKey: 'userId' });
+    User.belongsToMany(Title, { through: Watchlist, foreignKey: 'userId', otherKey: 'titleId', as: 'SavedTitles', onDelete: 'CASCADE' });
+    Title.belongsToMany(User, { through: Watchlist, foreignKey: 'titleId', otherKey: 'userId', onDelete: 'CASCADE' });
 
     Title.hasMany(CastCrew, { foreignKey: 'tconst' });
     CastCrew.belongsTo(Title, { foreignKey: 'tconst' });

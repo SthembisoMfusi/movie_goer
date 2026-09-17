@@ -562,6 +562,23 @@ components:
         nconst:
           type: string
           example: "nm0000151"
+        primaryName:
+          type: string
+          example: "Morgan Freeman"
+        birthYear:
+          type: string
+          nullable: true
+          example: "1937"
+        deathYear:
+          type: string
+          nullable: true
+          example: null
+        primaryProfession:
+          type: string
+          example: "actor,producer,soundtrack"
+        knownForTitles:
+          type: string
+          example: "tt0111161,tt0468569"
     Rating:
       type: object
       properties:
