@@ -40,9 +40,7 @@ export  default function Home() {
 
   return (
     <div>
-      <h1 style={{ marginBottom: '2rem' }}>🏆 Top Rated Movies</h1>
-      
-      {/* A simple CSS Grid to make it look like a movie catalog */}
+      <h1 style={{ marginBottom: '2rem' }}>Top Rated Movies</h1>
       <div style={{ 
         display: 'grid', 
         gap: '1.5rem', 
