@@ -1,4 +1,7 @@
 import type { FastifyRequest, FastifyReply} from 'fastify';
+import { tmdb } from '../services/tmdb.service.js';
+import { tmdb } from '../services/tmdb.service';
+import Watchlist from '../models/Watchlist.model';
 
 /**
  * Gets all titles in the authenticated user's watchlist.
@@ -9,23 +12,11 @@ export const getWatchlist = async (request: FastifyRequest, reply: FastifyReply)
     try {
         await request.jwtVerify();
         const { userId } = request.user as { userId: number };
-
-        const userWithWatchlist = await request.server.db.User.findByPk(userId, {
-            attributes: ['id', 'name'], 
-            include: [{
-                model: request.server.db.Title,
-                as: 'SavedTitles',
-                attributes: ['tconst', 'primaryTitle', 'titleType', 'startYear', 'runtimeMinutes', 'genres'],
-                include: [{ model: request.server.db.Rating, required: false }]
-            }]
-        });
-
-        if (!userWithWatchlist) {
-            return reply.status(404).send({ error: 'User not found' });
-        }
-
-        const userJson = userWithWatchlist.toJSON() as any;
-        return reply.send({ success: true, watchlist: userJson.SavedTitles || [] });
+        const items = await request.server.db.Watchlist.findAll({ where: { userId } });
+        const watchlist = await Promise.all(
+            items.map(item => tmdb.getMovieById(item.titleId).catch(() => ({ id: item.titleId, error: 'unavailable' })))
+        );
+        return reply.send({ success: true, watchlist });
 
     } catch (error: any) {
         if (error.code === 'FST_JWT_NO_AUTHORIZATION_IN_HEADER' || error.message.includes('token')) {
@@ -47,7 +38,7 @@ export const addToWatchlist = async (request: FastifyRequest, reply: FastifyRepl
     try {
         await request.jwtVerify();
         const { userId } = request.user as { userId: number}
-        const titleExists = await request.server.db.Title.findByPk(titleId);
+        const titleExists = await tmdb.getMovieById(titleId)
         if (!titleExists){
             return reply.status(404).send({ error: 'Movie not found in database'})
         }
