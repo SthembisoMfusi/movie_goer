@@ -1,4 +1,5 @@
-name: Node.js CI Pipeline
+name: Full Stack CI/CD
+
 on:
   push:
     branches: [ "main" ]
@@ -6,8 +7,35 @@ on:
     branches: [ "main" ]
 
 jobs:
-  test:
+  # ==========================================
+  # JOB 1: STATIC CHECKS (Runs first, very fast)
+  # ==========================================
+  backend-checks:
+    name: 🔎 Backend Type Check
     runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm ci
+
+      - name: 🧐 Run TypeScript Compiler Check
+        run: npm run typecheck
+
+  # ==========================================
+  # JOB 2: BACKEND TESTS (Waits for Job 1 to pass)
+  # ==========================================
+  backend-tests:
+    name: 🧪 Backend Integration Tests
+    runs-on: ubuntu-latest
+    needs: backend-checks # <--- This creates the visual link in GitHub!
 
     services:
       postgres:
@@ -24,36 +52,110 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+    env:
+      DB_USER: github_runner
+      DB_PASSWORD: secretpassword
+      DB_NAME: movie_goer_test
+      DB_HOST: localhost
+      DB_PORT: 5432
+      JWT_SECRET: testing_secret_key_for_ci
+
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '22.22.1'
-        cache: 'npm'
+      - name: ⚙️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: 'npm'
 
-    - name: Install Dependencies
-      run: npm ci --verbose
-    - name: Debug Dependencies
-      run: |
-        pwd
-        node --version
-        npm --version
-        ls -la
-        ls -la node_modules/@types || true
-        npm ls @types/node
-        npx tsc --version
-    - name: Type Check
-      run: npm run typecheck
+      - name: 📦 Install Dependencies
+        run: npm ci
 
-    - name: Run Database Seeder and Tests
-      env:
-        DB_USER: github_runner
-        DB_PASSWORD: secretpassword
-        DB_NAME: movie_goer_test
-        DB_HOST: localhost
-        DB_PORT: 5432
-        JWT_SECRET: testing_secret_key_for_ci
-      run: npm run test:ci
+      - name: 🗄️ Seed Database and Run Vitest
+        run: npm run test:ci
+
+  # ==========================================
+  # JOB 3: FRONTEND E2E (Waits for Job 2 to pass)
+  # ==========================================
+  frontend-e2e:
+    name: 🎭 Frontend E2E (Playwright)
+    runs-on: ubuntu-latest
+    needs: backend-tests # <--- This creates the final visual link!
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: github_runner
+          POSTGRES_PASSWORD: secretpassword
+          POSTGRES_DB: movie_goer_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DB_USER: github_runner
+      DB_PASSWORD: secretpassword
+      DB_NAME: movie_goer_test
+      DB_HOST: localhost
+      DB_PORT: 5432
+      JWT_SECRET: testing_secret_key_for_ci
+      PORT: 3000
+
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: 'npm'
+
+      # ---- BACKEND SETUP ----
+      - name: 📦 Install Backend Dependencies
+        run: npm ci
+
+      - name: 🗄️ Seed Test Database
+        run: npm run db:seed
+
+      - name: 🚀 Start Backend API
+        run: npm run start &
+
+      - name: ⏳ Wait for API to be Ready
+        run: npx wait-on http://localhost:3000/docs -t 30000
+
+      # ---- FRONTEND SETUP ----
+      - name: 📦 Install Frontend Dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: 🌐 Start Vite Frontend Server
+        working-directory: ./frontend
+        run: npm run dev &
+
+      - name: ⏳ Wait for Frontend to be Ready
+        run: npx wait-on http://localhost:5173 -t 30000
+
+      # ---- PLAYWRIGHT ----
+      - name: 🎭 Install Playwright Browsers
+        working-directory: ./frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: 🧪 Run Playwright E2E Tests
+        working-directory: ./frontend
+        run: npm run test:e2e
+
+      - name: 📸 Upload Playwright Report on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7

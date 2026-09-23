@@ -49,8 +49,9 @@ export default function Register() {
 
       <form onSubmit={handleRegister} className="flex flex-col gap-4">
         <div>
-          <label className="block mb-1 font-semibold text-gray-900 text-sm">Your Name</label>
+          <label htmlFor="name" className="block mb-1 font-semibold text-gray-900 text-sm">Your Name</label>
           <input 
+          id='name'
             type="text" 
             required 
             value={name}
@@ -60,8 +61,9 @@ export default function Register() {
         </div>
 
         <div>
-          <label className="block mb-1 font-semibold text-gray-900 text-sm">Email</label>
+          <label htmlFor="email" className="block mb-1 font-semibold text-gray-900 text-sm">Email</label>
           <input 
+            id="email"
             type="email" 
             required 
             value={email}
@@ -71,8 +73,9 @@ export default function Register() {
         </div>
         
         <div>
-          <label className="block mb-1 font-semibold text-gray-900 text-sm">Password</label>
+          <label htmlFor="password" className="block mb-1 font-semibold text-gray-900 text-sm">Password</label>
           <input 
+          id="password"
             type="password" 
             required 
             value={password}

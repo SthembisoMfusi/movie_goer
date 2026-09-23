@@ -4,6 +4,7 @@ import fastifyJwt from '@fastify/jwt';
 
 import sequelizePlugin from './plugins/sequelize.js';
 import swaggerPlugin from './plugins/swagger.js'
+import corsPlugin from './plugins/cors.js'
 
 import titleRoutes from './routes/title.routes.js';
 import authRoutes from './routes/auth.routes.js';
@@ -18,6 +19,7 @@ const fastify = Fastify({
 });
 
 fastify.register(sequelizePlugin);
+fastify.register(corsPlugin);
 fastify.register(swaggerPlugin);
 fastify.register(fastifyJwt, {
     secret: process.env.JWT_SECRET as string
