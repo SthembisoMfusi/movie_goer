@@ -1,4 +1,4 @@
-import TmdbError from '.';
+import TmdbError from '../errors/Tmdb.error.js';
 
 
 const TMDB_BASE_URL = process.env.TMDB_BASE_URL;
