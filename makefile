@@ -1,6 +1,6 @@
 .PHONY: check-docker up build down logs clean db-shell api-shell dev test typecheck \
         frontend-dev frontend-build frontend-test frontend-install \
-        install seed-docker db-reset lint restart status ps test-all
+        install seed-docker db-reset lint restart status ps test-all create-dump
 
 # ==========================================
 # DOCKER CONTROLS
@@ -120,3 +120,13 @@ test-all: check-docker
 		kill $$(cat /tmp/frontend-dev.pid) 2>/dev/null || true; \
 		rm -f /tmp/frontend-dev.pid; \
 		exit $$EXIT_CODE
+
+# ==========================================
+# SEEDING & BACKUPS
+# ==========================================
+
+create-dump:
+	@echo "Creating database dump from local PostgreSQL (Port 5432)..."
+	@echo "This might take a few minutes for 60 million rows. Please wait..."
+	pg_dump -U sthe -h localhost -p 5432 -d movie_goer -F c -f movie_goer_seed.dump
+	@echo "✅ Dump created successfully: movie_goer_seed.dump"

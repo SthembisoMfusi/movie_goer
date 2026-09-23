@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   db:
     image: postgres:16
@@ -22,6 +24,20 @@ services:
       DB_HOST: db
     depends_on:
       - db
+
+  frontend:
+    build: ./frontend
+    restart: always
+    ports:
+      - "5173:5173"
+    environment:
+      - API_URL=http://api:3000 
+      - CHOKIDAR_USEPOLLING=true 
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - api
 
 volumes:
   pgdata:
