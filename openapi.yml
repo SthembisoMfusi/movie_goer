@@ -2,9 +2,10 @@ openapi: 3.0.3
 info:
   title: movieGoer API
   description: >
-    An enterprise-grade REST API for an IMDb clone. 
-    Built with Fastify, Sequelize, and PostgreSQL. Features robust pagination, rate-limiting, and JWT authentication.
-  version: "1.0.0"
+    An enterprise-grade REST API for an IMDb clone.
+    Built with Fastify, Sequelize (auth/watchlist only), and the TMDB API
+    for titles and people. Features rate-limiting and JWT authentication.
+  version: "2.0.0"
   contact:
     name: API Support
 servers:
@@ -15,11 +16,11 @@ tags:
   - name: Auth
     description: User registration, login, and secure profile management
   - name: Titles
-    description: Search and retrieve movies, TV shows, and their ratings
+    description: Search and retrieve movies via TMDB
   - name: People
-    description: Lookup actors, directors, writers, and their filmography
+    description: Lookup actors, directors, writers via TMDB
   - name: Watchlist
-    description: Manage authenticated users' saved movies
+    description: Manage authenticated users' saved movies (TMDB IDs)
 
 paths:
   # ================= AUTH ROUTES =================
@@ -119,188 +120,143 @@ paths:
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
-  # ================= TITLE ROUTES =================
+  # ================= TITLE ROUTES (TMDB-backed) =================
   /titles/search:
     get:
       tags: [Titles]
       summary: Search for movies by title
-      description: Performs a case-insensitive wildcard search using GIN Trigram indexes for maximum performance.
+      description: Proxies TMDB's /search/movie endpoint.
       parameters:
         - $ref: '#/components/parameters/SearchQuery'
         - $ref: '#/components/parameters/PageQuery'
-        - $ref: '#/components/parameters/LimitQuery'
       responses:
         '200':
-          description: A paginated list of matching movies
+          description: TMDB's paginated movie search results
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  pagination:
-                    $ref: '#/components/schemas/PaginationMeta'
-                  results:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Title'
+                $ref: '#/components/schemas/TmdbMovieSearchResponse'
+        '502':
+          $ref: '#/components/responses/UpstreamError'
 
   /titles/{id}:
     get:
       tags: [Titles]
-      summary: Get a movie by ID
-      description: Fetches complete movie details including average rating and associated cast members.
+      summary: Get a movie by TMDB ID
+      description: Fetches full movie details from TMDB, including credits.
       parameters:
         - in: path
           name: id
           required: true
           schema:
             type: string
-            example: "tt0111161"
-          description: The alphanumeric tconst ID of the title
+            example: "278"
+          description: The numeric TMDB movie ID
       responses:
         '200':
           description: The requested movie
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  title:
-                    $ref: '#/components/schemas/Title'
+                $ref: '#/components/schemas/TmdbMovieDetails'
         '404':
           $ref: '#/components/responses/NotFoundError'
+        '502':
+          $ref: '#/components/responses/UpstreamError'
 
   /titles/top-rated:
     get:
       tags: [Titles]
-      summary: Get the top-rated movies
-      description: Fetches titles sorted by their average IMDB rating in descending order.
+      summary: Get TMDB's top-rated movies
       parameters:
         - $ref: '#/components/parameters/PageQuery'
-        - $ref: '#/components/parameters/LimitQuery'
       responses:
         '200':
-          description: A paginated list of top-rated movies
+          description: TMDB's paginated top-rated movie list
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  pagination:
-                    $ref: '#/components/schemas/PaginationMeta'
-                  topRatedTitles:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Title'
+                $ref: '#/components/schemas/TmdbMovieSearchResponse'
+        '502':
+          $ref: '#/components/responses/UpstreamError'
 
-  # ================= PEOPLE ROUTES =================
+  # ================= PEOPLE ROUTES (TMDB-backed) =================
   /people/search:
     get:
       tags: [People]
       summary: Search for an actor/director by name
+      description: Proxies TMDB's /search/person endpoint.
       parameters:
         - $ref: '#/components/parameters/SearchQuery'
         - $ref: '#/components/parameters/PageQuery'
-        - $ref: '#/components/parameters/LimitQuery'
       responses:
         '200':
-          description: A paginated list of matching people
+          description: TMDB's paginated person search results
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  pagination:
-                    $ref: '#/components/schemas/PaginationMeta'
-                  results:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Person'
+                $ref: '#/components/schemas/TmdbPersonSearchResponse'
+        '502':
+          $ref: '#/components/responses/UpstreamError'
 
   /people/{id}:
     get:
       tags: [People]
-      summary: Get a person's basic profile by ID
+      summary: Get a person's profile by TMDB ID
       parameters:
         - in: path
           name: id
           required: true
           schema:
             type: string
-            example: "nm0000151"
+            example: "192"
       responses:
         '200':
           description: The requested person
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  person:
-                    $ref: '#/components/schemas/Person'
+                $ref: '#/components/schemas/TmdbPersonDetails'
         '404':
           $ref: '#/components/responses/NotFoundError'
+        '502':
+          $ref: '#/components/responses/UpstreamError'
 
   /people/{id}/credits:
     get:
       tags: [People]
-      summary: Get a person's full filmography
-      description: Fetches an actor or director along with every movie they worked on. Highly optimized and paginated.
+      summary: Get a person's profile and full movie credits
+      description: Fetches a person's TMDB profile plus their TMDB movie credits (cast + crew).
       parameters:
         - in: path
           name: id
           required: true
           schema:
             type: string
-            example: "nm0000151"
-        - $ref: '#/components/parameters/PageQuery'
-        - $ref: '#/components/parameters/LimitQuery'
+            example: "192"
       responses:
         '200':
-          description: The requested person and their associated movies
+          description: The requested person and their movie credits
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  success:
-                    type: boolean
                   person:
-                    $ref: '#/components/schemas/Person'
-                  pagination:
-                    $ref: '#/components/schemas/PaginationMeta'
+                    $ref: '#/components/schemas/TmdbPersonDetails'
                   credits:
-                    type: array
-                    items:
-                      allOf:
-                        - $ref: '#/components/schemas/CastCrewDetails'
-                        - type: object
-                          properties:
-                            Title:
-                              $ref: '#/components/schemas/Title'
+                    $ref: '#/components/schemas/TmdbPersonMovieCredits'
         '404':
           $ref: '#/components/responses/NotFoundError'
+        '502':
+          $ref: '#/components/responses/UpstreamError'
+
   # ================= WATCHLIST ROUTES =================
   /watchlist:
     get:
       tags: [Watchlist]
       summary: Get logged-in user's watchlist
-      description: Fetches all titles saved by the authenticated user.
+      description: Fetches the user's saved TMDB movie IDs, hydrated with live TMDB movie data.
       security:
         - bearerAuth: []
       responses:
@@ -317,7 +273,7 @@ paths:
                   watchlist:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Title'
+                      $ref: '#/components/schemas/TmdbMovieDetails'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
@@ -325,6 +281,7 @@ paths:
     post:
       tags: [Watchlist]
       summary: Add a movie to the watchlist
+      description: titleId must be a valid TMDB movie ID.
       security:
         - bearerAuth: []
       parameters:
@@ -333,7 +290,7 @@ paths:
           required: true
           schema:
             type: string
-            example: "tt0111161"
+            example: "278"
       responses:
         '201':
           description: Movie added successfully
@@ -347,7 +304,13 @@ paths:
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '404':
-          $ref: '#/components/responses/NotFoundError'
+          description: Movie not found on TMDB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Movie not found on TMDB"
         '409':
           description: Movie already exists in watchlist
           content:
@@ -356,7 +319,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 error: "Movie is already in your watchlist"
-                
+
     delete:
       tags: [Watchlist]
       summary: Remove a movie from the watchlist
@@ -368,7 +331,7 @@ paths:
           required: true
           schema:
             type: string
-            example: "tt0111161"
+            example: "278"
       responses:
         '200':
           description: Movie removed successfully
@@ -415,17 +378,7 @@ components:
         type: integer
         default: 1
         minimum: 1
-      description: Page number for pagination
-    LimitQuery:
-      in: query
-      name: limit
-      required: false
-      schema:
-        type: integer
-        default: 10
-        minimum: 1
-        maximum: 50
-      description: Items per page (Max 50)
+      description: Page number for pagination (TMDB fixes 20 results per page)
 
   responses:
     UnauthorizedError:
@@ -437,7 +390,7 @@ components:
           example:
             error: "Unauthorized: Invalid or missing token"
     NotFoundError:
-      description: Resource not found in database
+      description: Resource not found
       content:
         application/json:
           schema:
@@ -453,6 +406,14 @@ components:
           example:
             error: "Bad Request"
             message: "body/password must NOT have fewer than 6 characters"
+    UpstreamError:
+      description: TMDB request failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "TMDB request failed"
 
   schemas:
     ErrorResponse:
@@ -472,22 +433,6 @@ components:
           example: true
         message:
           type: string
-
-    PaginationMeta:
-      type: object
-      properties:
-        totalItems:
-          type: integer
-          example: 125
-        totalPages:
-          type: integer
-          example: 13
-        currentPage:
-          type: integer
-          example: 1
-        itemsPerPage:
-          type: integer
-          example: 10
 
     RegisterInput:
       type: object
@@ -532,75 +477,199 @@ components:
           type: string
           example: "john@example.com"
 
-    Title:
+    TmdbMovieSummary:
       type: object
+      description: A single movie as returned by TMDB search/list endpoints.
       properties:
-        tconst:
-          type: string
-          example: "tt0111161"
-        titleType:
-          type: string
-          example: "movie"
-        primaryTitle:
+        id:
+          type: integer
+          example: 278
+        title:
           type: string
           example: "The Shawshank Redemption"
-        startYear:
+        original_title:
           type: string
-          example: "1994"
-        runtimeMinutes:
+        overview:
           type: string
-          example: "142"
-        genres:
+        release_date:
           type: string
-          example: "Drama"
-        Rating:
-          $ref: '#/components/schemas/Rating'
-
-    Person:
-      type: object
-      properties:
-        nconst:
-          type: string
-          example: "nm0000151"
-        primaryName:
-          type: string
-          example: "Morgan Freeman"
-        birthYear:
+          example: "1994-09-23"
+        poster_path:
           type: string
           nullable: true
-          example: "1937"
-        deathYear:
+        backdrop_path:
           type: string
           nullable: true
-          example: null
-        primaryProfession:
-          type: string
-          example: "actor,producer,soundtrack"
-        knownForTitles:
-          type: string
-          example: "tt0111161,tt0468569"
-    Rating:
-      type: object
-      properties:
-        averageRating:
+        genre_ids:
+          type: array
+          items:
+            type: integer
+        vote_average:
           type: number
           format: float
-          example: 9.3
-        numVotes:
+          example: 8.7
+        vote_count:
           type: integer
-          example: 2700000
-
-    CastCrewDetails:
-      type: object
-      description: The junction table data mapping a person's role to a movie.
-      properties:
-        category:
+        popularity:
+          type: number
+        adult:
+          type: boolean
+        original_language:
           type: string
-          example: "actor"
-        job:
+
+    TmdbMovieSearchResponse:
+      type: object
+      properties:
+        page:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TmdbMovieSummary'
+        total_pages:
+          type: integer
+        total_results:
+          type: integer
+
+    TmdbMovieDetails:
+      allOf:
+        - $ref: '#/components/schemas/TmdbMovieSummary'
+        - type: object
+          properties:
+            runtime:
+              type: integer
+              nullable: true
+            status:
+              type: string
+            tagline:
+              type: string
+              nullable: true
+            budget:
+              type: integer
+            revenue:
+              type: integer
+            genres:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+            credits:
+              type: object
+              properties:
+                cast:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/TmdbCastMember'
+                crew:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/TmdbCrewMember'
+
+    TmdbCastMember:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        character:
+          type: string
+        profile_path:
           type: string
           nullable: true
-          example: null
-        characters:
+        order:
+          type: integer
+
+    TmdbCrewMember:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
           type: string
-          example: "[\"Ellis Boyd 'Red' Redding\"]"
+        job:
+          type: string
+        department:
+          type: string
+        profile_path:
+          type: string
+          nullable: true
+
+    TmdbPersonSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 192
+        name:
+          type: string
+          example: "Morgan Freeman"
+        profile_path:
+          type: string
+          nullable: true
+        known_for_department:
+          type: string
+          example: "Acting"
+        popularity:
+          type: number
+
+    TmdbPersonSearchResponse:
+      type: object
+      properties:
+        page:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TmdbPersonSummary'
+        total_pages:
+          type: integer
+        total_results:
+          type: integer
+
+    TmdbPersonDetails:
+      allOf:
+        - $ref: '#/components/schemas/TmdbPersonSummary'
+        - type: object
+          properties:
+            biography:
+              type: string
+            birthday:
+              type: string
+              nullable: true
+            deathday:
+              type: string
+              nullable: true
+            place_of_birth:
+              type: string
+              nullable: true
+
+    TmdbPersonMovieCredits:
+      type: object
+      properties:
+        id:
+          type: integer
+        cast:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/TmdbMovieSummary'
+              - type: object
+                properties:
+                  character:
+                    type: string
+        crew:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/TmdbMovieSummary'
+              - type: object
+                properties:
+                  job:
+                    type: string
+                  department:
+                    type: string
