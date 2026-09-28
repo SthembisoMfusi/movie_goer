@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { app } from '../../src/app.js';
 
-describe('Person Routes', () => {
+describe('Person Routes (TMDB-backed)', () => {
 
     beforeAll(async () => {
         await app.ready();
@@ -20,48 +20,49 @@ describe('Person Routes', () => {
         const body = response.json();
 
         expect(response.statusCode, `Person search failed. Expected status 200, but received ${response.statusCode}.`).toBe(200);
-        expect(body.success, 'Search response did not return success: true.').toBe(true);
         expect(Array.isArray(body.results), 'The server must return an array for search results.').toBe(true);
+        expect(body.results.length, 'Expected at least one result for "morgan freeman".').toBeGreaterThan(0);
     });
 
-    it('2. Should fetch a person by their ID', async () => {
+    it('2. Should fetch a person by their TMDB ID', async () => {
+        // 192 = Morgan Freeman
         const response = await app.inject({
             method: 'GET',
-            url: '/people/nm0000151'
+            url: '/people/192'
         });
 
         const body = response.json();
 
-        expect(response.statusCode, `Fetch person by ID failed. Expected status 200, but got ${response.statusCode}. If 404, verify that nm0000151 exists in the dataset.`).toBe(200);
-        expect(body.person, 'The response body is missing the "person" payload.').toBeDefined();
-        expect(body.person.nconst, 'The retrieved nconst ID does not match the requested ID.').toBe('nm0000151');
+        expect(response.statusCode, `Fetch person by ID failed. Expected status 200, but got ${response.statusCode}.`).toBe(200);
+        expect(body.id, 'The response is missing the TMDB person id.').toBe(192);
+        expect(body.name, 'Expected the person\'s name to be returned.').toContain('Morgan Freeman');
     });
 
     it('3. Should return a 404 for a fake person ID', async () => {
         const response = await app.inject({
             method: 'GET',
-            url: '/people/nm9999999999999'
+            url: '/people/999999999'
         });
 
-        expect(response.statusCode, `Validation failure. Expected status 404 for a non-existent ID, but received ${response.statusCode}.`).toBe(404);
+        expect(response.statusCode, `Expected status 404 for a non-existent ID, but received ${response.statusCode}.`).toBe(404);
         expect(response.json().error, 'The server should return a specific "Person not found" error string.').toBe('Person not found');
     });
 
     it('4. Should fetch the movie credits for a person', async () => {
         const response = await app.inject({
             method: 'GET',
-            url: '/people/nm0000151/credits'
+            url: '/people/192/credits'
         });
 
         const body = response.json();
 
-        expect(response.statusCode, `Credits query failed. Expected 200, but received ${response.statusCode}. Check the junction table associations.`).toBe(200);
+        expect(response.statusCode, `Credits query failed. Expected 200, but received ${response.statusCode}.`).toBe(200);
         expect(body.person, 'The response body is missing the "person" payload.').toBeDefined();
-        expect(body.credits, 'Association Failure: The Person object is missing the nested Titles array from the CastCrew junction table.').toBeDefined();
-        expect(Array.isArray(body.credits), 'The nested Titles property must be formatted as an array.').toBe(true);
+        expect(body.credits, 'The response body is missing the "credits" payload.').toBeDefined();
+        expect(Array.isArray(body.credits.cast), 'credits.cast must be an array.').toBe(true);
 
-        if (body.credits.length > 0){
-            expect(body.credits[0].Title, 'The CastCrew row must include the nexted Title object').toBeDefined();
+        if (body.credits.cast.length > 0) {
+            expect(body.credits.cast[0].title, 'Each cast credit should include the movie title.').toBeDefined();
         }
     });
 });

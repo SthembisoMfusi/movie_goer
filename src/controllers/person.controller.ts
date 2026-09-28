@@ -1,99 +1,52 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { Op } from 'sequelize';
+import { tmdb } from '../services/tmdb.service.js';
+import TmdbError from '../errors/Tmdb.error.js';
 
-/**
- * Searches for actors/directors by name using a case-insensitive query with pagination.
- * @route GET /people/search?q={query}
- */
+
+/** @route GET /people/search?q={query}&page={page} */
 export const searchPeople = async (request: FastifyRequest, reply: FastifyReply) => {
-    const { q: query, page, limit } = request.query as { q: string; page: number; limit: number };
-    const offset = (page - 1) * limit;
+    const { q: query, page } = request.query as { q: string; page: number };
 
     try {
-        const { count, rows } = await request.server.db.Person.findAndCountAll({
-            where: {
-                primaryName: {
-                    [Op.iLike]: `%${query}%`
-                },
-            },
-            limit: limit,
-            offset: offset 
-        });
-
-        return reply.send({ 
-            success: true, 
-            pagination: {
-                totalItems: count,
-                totalPages: Math.ceil(count / limit),
-                currentPage: page,
-                itemsPerPage: limit
-            },
-            results: rows 
-        });
+        const data = await tmdb.searchPeople(query, page);
+        return reply.send(data);
     } catch (error) {
         request.server.log.error(error);
-        return reply.status(500).send({ error: 'Database search failed' });
+        return reply.status(502).send({ error: 'TMDB search failed' });
     }
-}
+};
 
-/**
- * Fetches a single person by their ID.
- * @route GET /people/:id
- */
+/** @route GET /people/:id */
 export const getPersonById = async (request: FastifyRequest, reply: FastifyReply) => {
     const rawId = (request.params as { id: string }).id;
-    const id = rawId.trim(); 
-    
+    const id = rawId.trim();
+
     try {
-        const person = await request.server.db.Person.findByPk(id);
-        if (!person) {
+        const data = await tmdb.getPersonById(id);
+        return reply.send(data);
+    } catch (error) {
+        if (error instanceof TmdbError && error.status === 404) {
             return reply.status(404).send({ error: 'Person not found' });
         }
-        return reply.send({ success: true, person });
-    } catch (error) {
         request.server.log.error(error);
-        return reply.status(500).send({ error: 'Database query failed' });
+        return reply.status(502).send({ error: 'TMDB request failed' });
     }
-}
+};
 
-/**
- * Fetches the movie credits associated with a specific person.
- * @route GET /people/:id/credits
- */
-export const getPersonCredits = async (request: FastifyRequest, reply: FastifyReply) =>{
+/** @route GET /people/:id/credits */
+export const getPersonCredits = async (request: FastifyRequest, reply: FastifyReply) => {
     const rawId = (request.params as { id: string }).id;
-    const id = rawId.trim(); 
-    const { page, limit } = request.query as { page: number; limit: number};
-    const offset = (page -1 ) * limit;
+    const id = rawId.trim();
 
     try {
-        const person = await request.server.db.Person.findByPk(id);
-        
-        if (!person) return reply.status(404).send({ error: 'Person not found'})
-
-
-        const { count, rows } = await request.server.db.CastCrew.findAndCountAll({
-            where: {nconst: id},
-            limit: limit,
-            offset: offset,
-            include: [{
-                model: request.server.db.Title,
-                required: true,
-            }]
-        })
-        return reply.send({
-            success: true,
-            person: person,
-            pagination: {
-                totalItems: count,
-                totalPages: Math.ceil(count/limit),
-                currentPage: page,
-                itemsPerPage: limit
-            },
-            credits: rows
-        })
+        const person = await tmdb.getPersonById(id);
+        const credits = await tmdb.getPersonMovieCredits(id);
+        return reply.send({ person, credits });
     } catch (error) {
+        if (error instanceof TmdbError && error.status === 404) {
+            return reply.status(404).send({ error: 'Person not found' });
+        }
         request.server.log.error(error);
-        return reply.status(500).send({ error: 'Database query failed'});
+        return reply.status(502).send({ error: 'TMDB request failed' });
     }
-}
+};

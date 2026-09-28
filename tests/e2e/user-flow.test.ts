@@ -49,14 +49,14 @@ describe('Full User Journey: Movie Discovery & Watchlist', () => {
     it('Step 3: User searches the database for "The Matrix"', async () => {
         const response = await app.inject({
             method: 'GET',
-            url: '/titles/search?q=The Matrix&limit=5',
+            url: '/titles/search?q=The Matrix',
         });
         
         const body = response.json();
         expect(response.statusCode).toBe(200);
         expect(body.results.length).toBeGreaterThan(0);
 
-        discoveredMovieId = body.results[0].tconst;
+        discoveredMovieId = String(body.results[0].id);
         expect(discoveredMovieId).toBeDefined();
     });
 
@@ -82,8 +82,8 @@ describe('Full User Journey: Movie Discovery & Watchlist', () => {
         expect(response.statusCode).toBe(200);
         
         const savedMovie = body.watchlist[0];
-        expect(savedMovie.tconst).toBe(discoveredMovieId);
-        expect(savedMovie.primaryTitle).toContain('Matrix');
+        expect(String(savedMovie.id)).toBe(discoveredMovieId);
+        expect(savedMovie.title).toContain('Matrix');
     });
 
     it('Step 6: User deletes their account before leaving', async () => {

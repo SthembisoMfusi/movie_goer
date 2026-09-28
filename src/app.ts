@@ -2,14 +2,15 @@ import 'dotenv/config';
 import Fastify from 'fastify';
 import fastifyJwt from '@fastify/jwt';
 
-import sequelizePlugin from './plugins/sequelize.js';
 import swaggerPlugin from './plugins/swagger.js'
 import corsPlugin from './plugins/cors.js'
+import sequelizePlugin from './plugins/sequelize.js'
 
 import titleRoutes from './routes/title.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import personRoutes from './routes/person.routes.js';
 import watchlistRoutes from './routes/watchlist.routes.js';
+import { Sequelize } from 'sequelize';
 
 
 

@@ -14,29 +14,23 @@ interface Movie {
 export default function Home() {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
   useEffect(() => {
     const fetchTopRated = async () => {
       try {
-        const response = await fetch('/api/titles/top-rated?limit=12');
+        const response = await fetch('/api/titles/top-rated');
         const data = await response.json();
-        if (data.success) {
-          setMovies(data.topRatedTitles);
-        } else {
-          setError('Could not load movies.');
-        }
-      } catch {
-        setError('A network error occurred.');
+        setMovies(data.results ?? []);
+      } catch (error) {
+        console.error("Failed to fetch movies:", error);
       } finally {
         setLoading(false);
       }
     };
+
     fetchTopRated();
   }, []);
 
   if (loading) return <h2>Loading the best movies ever made...</h2>;
-  if (error) return <p style={{ color: 'crimson' }}>{error}</p>;
 
   return (
     <div>

@@ -4,7 +4,7 @@ import { app } from '../../src/app.js';
 describe('Watchlist Routes', () => {
     let authToken = '';
     let testUserId: number;
-    const testMovieId = 'tt0111161'; // The Shawshank Redemption
+    const testMovieId = '278'; // The Shawshank Redemption (TMDB id)
 
     const testUser = {
         name: 'Watchlist Tester',
@@ -16,7 +16,6 @@ describe('Watchlist Routes', () => {
         await app.ready();
 
         await app.db.User.destroy({ where: { email: testUser.email } });
-
 
         const registerRes = await app.inject({
             method: 'POST',
@@ -75,7 +74,20 @@ describe('Watchlist Routes', () => {
         expect(body.error, 'Expected a specific error message about the movie already being in the watchlist.').toBe('Movie is already in your watchlist');
     });
 
-    it('4. Should fetch the user\'s populated watchlist', async () => {
+    it('4. Should reject adding a movie that does not exist on TMDB', async () => {
+        const response = await app.inject({
+            method: 'POST',
+            url: '/watchlist/999999999',
+            headers: { authorization: `Bearer ${authToken}` }
+        });
+
+        const body = response.json();
+
+        expect(response.statusCode, `Expected 404 for a non-existent TMDB movie, but got ${response.statusCode}.`).toBe(404);
+        expect(body.error).toBe('Movie not found on TMDB');
+    });
+
+    it('5. Should fetch the user\'s populated watchlist', async () => {
         const response = await app.inject({
             method: 'GET',
             url: '/watchlist',
@@ -88,10 +100,10 @@ describe('Watchlist Routes', () => {
         expect(response.statusCode, `Fetch watchlist failed. Expected 200, got ${response.statusCode}`).toBe(200);
         expect(Array.isArray(watchlist), 'The watchlist payload should be an array.').toBe(true);
         expect(watchlist.length, 'The watchlist should contain the 1 movie we just added.').toBe(1);
-        expect(watchlist[0].tconst, 'The movie in the watchlist should match the requested test movie ID.').toBe(testMovieId);
+        expect(String(watchlist[0].id), 'The movie in the watchlist should match the requested test movie ID.').toBe(testMovieId);
     });
 
-    it('5. Should remove a movie from the user\'s watchlist', async () => {
+    it('6. Should remove a movie from the user\'s watchlist', async () => {
         const response = await app.inject({
             method: 'DELETE',
             url: `/watchlist/${testMovieId}`,
@@ -104,7 +116,7 @@ describe('Watchlist Routes', () => {
         expect(body.success, 'Response should indicate success: true upon deletion.').toBe(true);
     });
 
-    it('6. Should return a 404 when trying to delete a movie not in the watchlist', async () => {
+    it('7. Should return a 404 when trying to delete a movie not in the watchlist', async () => {
         const response = await app.inject({
             method: 'DELETE',
             url: `/watchlist/${testMovieId}`,
@@ -117,7 +129,7 @@ describe('Watchlist Routes', () => {
         expect(body.error, 'Expected a specific error message about the movie not being found.').toBe('Movie not found in your watchlist');
     });
 
-    it('7. Should verify the watchlist is now empty', async () => {
+    it('8. Should verify the watchlist is now empty', async () => {
         const response = await app.inject({
             method: 'GET',
             url: '/watchlist',
@@ -125,7 +137,6 @@ describe('Watchlist Routes', () => {
         });
 
         const body = response.json();
-
 
         expect(response.statusCode, `Fetch watchlist failed. Expected 200, got ${response.statusCode}`).toBe(200);
         expect(body.watchlist.length, 'The watchlist should be completely empty after the deletion test.').toBe(0);

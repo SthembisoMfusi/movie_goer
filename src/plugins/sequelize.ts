@@ -3,11 +3,7 @@ import fp from 'fastify-plugin';
 import type { FastifyInstance } from 'fastify';
 
 import { User, initUserModel } from '../models/User.model.js';
-import { Title, initTitleModel } from '../models/Title.model.js';
-import { Person, initPersonModel } from '../models/Person.model.js';
-import { Rating, initRatingModel } from '../models/Rating.model.js';
-import { CastCrew, initCastCrewModel } from '../models/CastCrew.model.js';
-import {  Watchlist, initWatchlistModel } from '../models/Watchlist.model.js';
+import { Watchlist, initWatchlistModel } from '../models/Watchlist.model.js';
 
 async function sequelizePlugin(fastify: FastifyInstance) {
 
@@ -19,49 +15,24 @@ async function sequelizePlugin(fastify: FastifyInstance) {
             host: process.env.DB_HOST || 'localhost',
             port: parseInt(process.env.DB_PORT || '5432'),
             dialect: 'postgres',
-            logging: false, 
+            logging: false,
         }
     );
 
     await sequelize.authenticate();
     fastify.log.info("Database connection established.");
 
-
     initUserModel(sequelize);
-    initTitleModel(sequelize);
-    initPersonModel(sequelize);
-    initRatingModel(sequelize);
-    initCastCrewModel(sequelize);
     initWatchlistModel(sequelize);
 
-    Title.hasOne(Rating, { foreignKey: 'tconst' });
-    Rating.belongsTo(Title, { foreignKey: 'tconst' });
-
-    Title.belongsToMany(Person, { through: CastCrew, foreignKey: 'tconst', otherKey: 'nconst', constraints: false });
-    Person.belongsToMany(Title, { through: CastCrew, foreignKey: 'nconst', otherKey: 'tconst', constraints: false });
-
-    User.belongsToMany(Title, { through: Watchlist, foreignKey: 'userId', otherKey: 'titleId', as: 'SavedTitles', onDelete: 'CASCADE' });
-    Title.belongsToMany(User, { through: Watchlist, foreignKey: 'titleId', otherKey: 'userId', onDelete: 'CASCADE' });
-
-    Title.hasMany(CastCrew, { foreignKey: 'tconst' });
-    CastCrew.belongsTo(Title, { foreignKey: 'tconst' });
-    Person.hasMany(CastCrew, { foreignKey: 'nconst' });
-    CastCrew.belongsTo(Person, { foreignKey: 'nconst' });
-
-
-
-
+    User.hasMany(Watchlist, { foreignKey: 'userId' });
+    Watchlist.belongsTo(User, { foreignKey: 'userId' });
 
     fastify.decorate('db', {
         sequelize,
         User,
-        Title,
-        Person,
-        Rating,
-        CastCrew,
         Watchlist
     });
-
 
     fastify.addHook("onClose", async () => {
         await sequelize.close();
