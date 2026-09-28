@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { app } from '../../src/app.js';
 
-describe('Person Routes (TMDB-backed)', () => {
+describe('Person Routes', () => {
 
     beforeAll(async () => {
         await app.ready();

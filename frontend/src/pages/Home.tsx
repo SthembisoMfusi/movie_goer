@@ -19,6 +19,8 @@ export default function Home() {
       try {
         const response = await fetch('/api/titles/top-rated');
         const data = await response.json();
+        
+
         setMovies(data.results ?? []);
       } catch (error) {
         console.error("Failed to fetch movies:", error);
